@@ -1,4 +1,5 @@
-const data = require('./data.json');
+const data1 = require('./page-1-400.json');
+const data2 = require('./backwards-from-oldest.json');
 
 function groupBy(list, keyGetter) {
   const map = new Map();
@@ -13,12 +14,32 @@ function groupBy(list, keyGetter) {
   });
   return map;
 }
+
+// having issues past requesting beyond the 10,000th review
+// so data1 is all reviews in ascending order, and data2 is all reviews in descending order
+const data = [...data1, ...data2];
+console.log(`total data length: ${data.length}`);
+
+// remove reviews that have the same reviewID
+// this is the dupliate reviews that we fetched as well as duplicate reviews
+// between product_page_ids that point to the same product.  i.e FS is product_Id "3" and "55"
+uniqueData = data.filter(
+  (thing, index, self) =>
+    index === self.findIndex((t) => t.reviewId === thing.reviewId)
+);
+
+console.log(
+  `this should be the unique reviews from the api: ${uniqueData.length}`
+);
+
+// group the reviews by product ID
 const groupedByProductId = groupBy(data, (data) => data.productId);
+
+const arrayOfFormattedObjects = [];
 
 groupedByProductId.forEach((product) => {
   const prodId = product[0].productId;
   const numOfReviews = product.length;
-  // console.log(product);
   const numOfRecommends = product.filter((obj) => obj.bottomLine === 'Yes')
     .length;
   const numOfDontRecommends = product.filter((obj) => obj.bottomLine === 'No')
@@ -30,7 +51,6 @@ groupedByProductId.forEach((product) => {
   const numOf3StarRatings = product.filter((obj) => obj.rating === 3).length;
   const numOf2StarRatings = product.filter((obj) => obj.rating === 2).length;
   const numOf1StarRatings = product.filter((obj) => obj.rating === 1).length;
-  // console.log(`${numOf5StarRatings} number of 5 star ratings`);
   const dataObject = {
     averageRating,
     prodId,
@@ -44,12 +64,11 @@ groupedByProductId.forEach((product) => {
     numOf1StarRatings,
   };
 
-  console.log({ dataObject });
-  // console.log(
-  //   `${prodId}: ${averageRating} stars out of ${numOfReviews} number of reviews`
-  // );
-  // console.log(`${numOfRecommends} of people say Yes they recommend`);
-  // console.log(
-  //   `${numOfDontRecommends} of people say No they wouldn't recommend`
-  // );
+  arrayOfFormattedObjects.push(dataObject);
 });
+
+console.log(
+  'here are the dataObjects for each product id according to power reviews'
+);
+console.log('3 and 55 are both FS');
+console.log(arrayOfFormattedObjects);

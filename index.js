@@ -5,9 +5,14 @@ const merchantID = process.env.POWER_REVIEW_MERCHANT_ID;
 const axios = require('axios');
 const fs = require('fs');
 const chalk = require('chalk');
+const axiosRetry = require('axios-retry');
 
-const url = `https://readservices-b2c.powerreviews.com/m/${merchantID}/reviews?sort=Newest&apikey=${apiKey}&date=1420092000000`;
-const outputFile = 'data.json';
+// const url = `https://readservices-b2c.powerreviews.com/m/${merchantID}/reviews?sort=Newest&paging.size=25&apikey=${apiKey}&date=1420092000000`;
+const url = `https://readservices-b2c.powerreviews.com/m/${merchantID}/reviews?sort=Oldest&paging.size=25&apikey=${apiKey}&date=1420092000000`;
+// const outputFile = 'data.json';
+const outputFile = 'backwards-from-oldest.json';
+// const outputFile = 'data2.json';
+// const outputFile = 'page-1-400.json';
 const parsedResults = [];
 
 console.log(
@@ -16,11 +21,14 @@ console.log(
   )
 );
 
+// Exponential back-off retry delay between requests
+axiosRetry(axios, { retryDelay: axiosRetry.exponentialDelay, retries: 10 });
+
 const getWebsiteContent = async (url) => {
   try {
     const response = await axios.get(url);
-    const totalResults = response.data.paging.total_results || 9999999;
-    const totalPages = response.data.paging.pages_total;
+    const totalResults = response.data.paging.total_results || 11667;
+    const totalPages = response.data.paging.pages_total || 467;
     const currentPage = response.data.paging.current_page_number;
     console.log(`just got response for page: ${currentPage}`);
     const nextPageUrl = response.data.paging.next_page_url;
@@ -41,23 +49,37 @@ const getWebsiteContent = async (url) => {
       parsedResults.push(metadata);
     }
 
-    if (currentPage === 10) {
+    if (currentPage === 400) {
       console.log(
-        `this was the last page, which was ${currentPage} because apparently we have ${totalPages} total pages`
+        `there was no nextPageURL - we were on page:${currentPage} because apparently we have ${totalPages} total pages`
       );
       exportResults(parsedResults, totalResults);
       return false;
     }
 
-    console.log(`requesting data for the next page: ${currentPage + 1}`);
+    console.log(`in a few secs, this is the next page URL: ${nextPageUrl}`);
     setTimeout(() => {
-      getWebsiteContent(
-        `https://readservices-b2c.powerreviews.com${nextPageUrl}&apikey=${apiKey}`
+      console.log(`we just did ${currentPage}`);
+      console.log(
+        `and now we are requesting data for the next page: ${currentPage + 1}`
       );
-    }, 1000);
+      try {
+        getWebsiteContent(
+          `https://readservices-b2c.powerreviews.com${nextPageUrl}&apikey=${apiKey}`
+        );
+      } catch (error) {
+        console.log(chalk.yellow.bgBlue(`\n we were on page ${currentPage}\n`));
+        console.log(
+          chalk.yellow.bgBlue(`\n here is the nextPageURL ${nextPageUrl}\n`)
+        );
+      }
+    }, 2000);
   } catch (error) {
-    console.error(error);
-    exportResults(parsedResults, totalResults);
+    console.log(
+      chalk.yellow.bgBlue(
+        `\n there was an error i think: ${error}\n this was in the outermost catch`
+      )
+    );
   }
 };
 
