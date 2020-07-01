@@ -1,3 +1,6 @@
+const fs = require('fs');
+const chalk = require('chalk');
+
 const data1 = require('./page-1-400.json');
 const data2 = require('./backwards-from-oldest.json');
 
@@ -33,7 +36,7 @@ console.log(
 );
 
 // group the reviews by product ID
-const groupedByProductId = groupBy(data, (data) => data.productId);
+const groupedByProductId = groupBy(uniqueData, (data) => data.productId);
 
 const arrayOfFormattedObjects = [];
 
@@ -67,8 +70,23 @@ groupedByProductId.forEach((product) => {
   arrayOfFormattedObjects.push(dataObject);
 });
 
-console.log(
-  'here are the dataObjects for each product id according to power reviews'
+const outputFile = 'formattedReviewes.json';
+
+fs.writeFile(
+  outputFile,
+  JSON.stringify(arrayOfFormattedObjects, null, 4),
+  (err) => {
+    if (err) {
+      console.log(err);
+    }
+    console.log(
+      chalk.yellow.bgBlue(
+        `\n ${chalk.underline.bold(
+          arrayOfFormattedObjects.length
+        )} Results exported successfully to ${chalk.underline.bold(
+          outputFile
+        )}\n`
+      )
+    );
+  }
 );
-console.log('3 and 55 are both FS');
-console.log(arrayOfFormattedObjects);
